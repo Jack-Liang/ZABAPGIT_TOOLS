@@ -339,7 +339,13 @@ CLASS zcl_git_push IMPLEMENTATION.
             iv_password = iv_passwd ).
         ENDIF.
 
+        " 推送前强制重新序列化一次：repo_srv 返回的实例在会话内缓存 mt_local，
+        " 不刷就会拿旧快照跟远端比，表现是「明明改了却报 nothing to stage」
+        lo_repo->refresh( iv_drop_log   = abap_false
+                          iv_drop_cache = abap_true ).
+
         ls_files = zcl_abapgit_stage_logic=>get_stage_logic( )->get( lo_online ).
+
 
         collect_changes( EXPORTING is_files    = ls_files
                          IMPORTING et_added    = lt_added
