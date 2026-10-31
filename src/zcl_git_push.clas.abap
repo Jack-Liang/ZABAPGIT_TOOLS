@@ -121,34 +121,34 @@ CLASS zcl_git_push IMPLEMENTATION.
 
     DATA: lv_line TYPE string,
           lv_obj  TYPE string,
-          lv_key  TYPE string.
-
-    FIELD-SYMBOLS: <ls_local>  LIKE LINE OF is_files-local,
-                   <ls_remote> LIKE LINE OF is_files-remote.
+          lv_key  TYPE string,
+          ls_st   TYPE zif_abapgit_definitions=>ty_result.
 
     CLEAR: et_added, et_modified, et_deleted,
            ev_added, ev_modified, ev_deleted.
 
-    " local = 本地与远端不一致的文件（新增或修改）。
-    " stage logic 只返回有差异的文件，所以「远端已有同名文件」= 修改，否则 = 新增。
-    LOOP AT is_files-local ASSIGNING <ls_local>.
-      READ TABLE is_files-remote TRANSPORTING NO FIELDS
-        WITH KEY path     = <ls_local>-file-path
-                 filename = <ls_local>-file-filename.
-      IF sy-subrc = 0.
-        lv_line = |~ { <ls_local>-item-obj_type } { <ls_local>-item-obj_name }|.
-        APPEND lv_line TO et_modified.
-      ELSE.
-        lv_line = |+ { <ls_local>-item-obj_type } { <ls_local>-item-obj_name }|.
-        APPEND lv_line TO et_added.
-      ENDIF.
-    ENDLOOP.
-
-    " remote = 远端有、本地没有的文件 → 删除。remote 表只有文件级信息，没有 item，
-    " 因此这里按文件路径列出（.abap/.xml 各一行），这也是 abapGit 自己的做法。
-    LOOP AT is_files-remote ASSIGNING <ls_remote>.
-      lv_line = |{ <ls_remote>-path }{ <ls_remote>-filename }|.
-      APPEND lv_line TO et_deleted.
+    " 差异判定只能用 is_files-status：stage logic 的 local/remote 经过
+    " remove_identical 裁剪后，local 只剩「新增+修改」，remote 只剩「删除」，
+    " 拿它们互相反查会把「修改」全判成「新增」。status 是 abapGit 自己算的逐文件结果：
+    "   lstate = A 新增 / M 修改 / D 删除 / 空 一致
+    LOOP AT is_files-status INTO ls_st.
+      CASE ls_st-lstate.
+        WHEN zif_abapgit_definitions=>c_state-added.
+          lv_line = |+ { ls_st-obj_type } { ls_st-obj_name }|.
+          APPEND lv_line TO et_added.
+        WHEN zif_abapgit_definitions=>c_state-modified.
+          lv_line = |~ { ls_st-obj_type } { ls_st-obj_name }|.
+          APPEND lv_line TO et_modified.
+        WHEN zif_abapgit_definitions=>c_state-deleted.
+          lv_line = |- { ls_st-obj_type } { ls_st-obj_name }|.
+          APPEND lv_line TO et_deleted.
+        WHEN OTHERS.
+          " 兜底：个别版本把「本地没有」记在 rstate 上
+          IF ls_st-rstate = zif_abapgit_definitions=>c_state-deleted.
+            lv_line = |- { ls_st-obj_type } { ls_st-obj_name }|.
+            APPEND lv_line TO et_deleted.
+          ENDIF.
+      ENDCASE.
     ENDLOOP.
 
     SORT et_added.
@@ -231,7 +231,8 @@ CLASS zcl_git_push IMPLEMENTATION.
       lv_head = lv_head(c_max_subject) && '...'.
     ENDIF.
 
-    rv_comment = lv_head.
+    " 首行与正文之间留空行：否则 git 把整段当 subject，标题会被拉成一长串
+    rv_comment = lv_head && cl_abap_char_utilities=>newline.
 
     " 外部描述占用了首行，统计与 TR 信息下沉到正文，保证信息不丢
     IF iv_manual IS NOT INITIAL.
@@ -250,7 +251,7 @@ CLASS zcl_git_push IMPLEMENTATION.
       rv_comment = rv_comment && cl_abap_char_utilities=>newline && lv_obj.
     ENDLOOP.
     LOOP AT it_deleted INTO lv_obj.
-      rv_comment = rv_comment && cl_abap_char_utilities=>newline && |D { lv_obj }|.
+      rv_comment = rv_comment && cl_abap_char_utilities=>newline && lv_obj.
     ENDLOOP.
 
   ENDMETHOD.
@@ -362,7 +363,7 @@ CLASS zcl_git_push IMPLEMENTATION.
 
         " 只算差异、不落提交：让调用方先看到「改了什么」，再决定 commit 描述
         IF iv_dryrun = abap_true.
-          APPEND 'dry-run: nothing pushed [v393]' TO et_log.
+          APPEND 'dry-run: nothing pushed' TO et_log.
           RETURN.
         ENDIF.
 
