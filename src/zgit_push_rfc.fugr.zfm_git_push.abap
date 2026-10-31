@@ -1,9 +1,11 @@
-FUNCTION ZFM_GIT_PUSH .
+FUNCTION ZFM_GIT_PUSH.
 *"----------------------------------------------------------------------
 *"*"本地接口：
 *"  IMPORTING
 *"     VALUE(IV_PACKAGE) TYPE  DEVCLASS
 *"     VALUE(IV_COMMENT) TYPE  STRING OPTIONAL
+*"     VALUE(IV_NAME) TYPE  STRING OPTIONAL
+*"     VALUE(IV_EMAIL) TYPE  STRING OPTIONAL
 *"     VALUE(IV_USER) TYPE  STRING OPTIONAL
 *"     VALUE(IV_PASSWD) TYPE  STRING OPTIONAL
 *"     VALUE(IV_DRYRUN) TYPE  CHAR1 OPTIONAL
@@ -27,6 +29,8 @@ FUNCTION ZFM_GIT_PUSH .
     EXPORTING
       iv_package  = iv_package
       iv_comment  = iv_comment
+      iv_name     = iv_name
+      iv_email    = iv_email
       iv_user     = iv_user
       iv_passwd   = iv_passwd
       iv_dryrun   = iv_dryrun

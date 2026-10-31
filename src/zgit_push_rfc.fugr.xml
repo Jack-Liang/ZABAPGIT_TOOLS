@@ -23,6 +23,16 @@
        <TYP>STRING</TYP>
       </RSIMP>
       <RSIMP>
+       <PARAMETER>IV_NAME</PARAMETER>
+       <OPTIONAL>X</OPTIONAL>
+       <TYP>STRING</TYP>
+      </RSIMP>
+      <RSIMP>
+       <PARAMETER>IV_EMAIL</PARAMETER>
+       <OPTIONAL>X</OPTIONAL>
+       <TYP>STRING</TYP>
+      </RSIMP>
+      <RSIMP>
        <PARAMETER>IV_USER</PARAMETER>
        <OPTIONAL>X</OPTIONAL>
        <TYP>STRING</TYP>
@@ -75,6 +85,14 @@
       </RSFDO>
       <RSFDO>
        <PARAMETER>IV_COMMENT</PARAMETER>
+       <KIND>P</KIND>
+      </RSFDO>
+      <RSFDO>
+       <PARAMETER>IV_NAME</PARAMETER>
+       <KIND>P</KIND>
+      </RSFDO>
+      <RSFDO>
+       <PARAMETER>IV_EMAIL</PARAMETER>
        <KIND>P</KIND>
       </RSFDO>
       <RSFDO>
